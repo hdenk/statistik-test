@@ -1,0 +1,89 @@
+;; gorilla-repl.fileformat = 1
+
+;; **
+;;; # Geometrisch verteilte Wahrscheinlichkeiten
+;;; Berechnung von Wahrscheinlichkeiten der geometrischen Verteilung. Hier: So lange Würfeln bis eine Sechs kommt, dabei Anzahl der Würfe zählen.
+;; **
+
+;; @@
+(ns statistik-test.geometrisch-verteilte-zahlen
+  (:require [gorilla-plot.core :as plot]))
+;; @@
+
+;; **
+;;; ## Wahrscheinlichkeiten
+;;; Logik zur Berechnung der (geometrischen) Wahrscheinlichkeiten.
+;; **
+
+;; @@
+(defn p-geo 
+  "Wahrscheinlichkeit nach Formel (p * q hoch n-1)"
+  [n, p] 
+  (let [q (- 1 p)]
+    (* p (Math/pow q (- n 1)))))
+ 
+(defn wahrscheinlichkeiten 
+  "Vektor mit w-cnt Wahrscheinlichkeiten nach Formel p-geo"
+  [w-cnt, p] 
+  (mapv (fn [n] (p-geo n p)) (range 1 (inc w-cnt))))
+;; @@
+
+;; **
+;;; ## Empirische Werte
+;;; Logik zur Berechnung von empirischen Werten (geometrisch verteilte Zahlen erzeugt durch Würfeln). 
+;; **
+
+;; @@
+(defn wuerfeln [] (inc (rand-int 6))) 
+
+(defn sechs? 
+  "liefert wahr wenn x ein Treffer ist"
+  [x]
+  (= x 6))
+
+(defn anzahl-wuerfe-bis
+  "Wuerfeln bis Treffer. Liefert Anzahl der Wuerfe"
+  [treffer-fn]
+  (inc (reduce (fn [cnt _] (inc cnt)) 
+          0 ; initial cnt
+          (take-while #(not (treffer-fn %)) ; Treffer ist nicht mit dabei  
+                      (repeatedly wuerfeln)))))
+
+(defn empirische-werte
+  "Geometrisch verteilte Zahlen erzeugen (Haefigkeiten)"
+  [v-cnt]
+  (take v-cnt (repeatedly #(anzahl-wuerfe-bis sechs?))))
+;; @@
+
+;; **
+;;; ## Parameter
+;;; Mit diesen Werten kann man experimentieren.
+;; **
+
+;; @@
+(def ^:const P 
+  "Wahrscheinlichkeit fuer Treffer" 
+  (/ 1.0  6.0))
+
+(def ^:const W-CNT 
+  "Anzahl der berechneten Wahrscheinlichkeiten (Breite der Verteilung -> y-erwartet)" 
+  50)
+
+(def ^:const V-CNT 
+  "Anzahl der Versuche (Jeder Versuch liefert genau einen Wert -> y-empirisch)" 
+  60)
+
+;; @@
+
+;; **
+;;; ## Plot
+;;; Ausgabe der Verteilung.
+;; **
+
+;; @@
+(let [y-erwartet (mapv (fn [x y] [x y]) (range 1 (inc W-CNT)) (wahrscheinlichkeiten W-CNT P))
+      y-empirisch (empirische-werte V-CNT)]
+  (print (sort-by key (frequencies y-empirisch)))
+  (plot/compose (plot/list-plot y-erwartet :joined true :color "red")
+                (plot/histogram y-empirisch :bins V-CNT :normalize :probability :color "gray")))
+;; @@

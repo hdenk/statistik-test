@@ -1,0 +1,102 @@
+;; gorilla-repl.fileformat = 1
+
+;; **
+;;; # Binomial verteilte Zahlen
+;;; 
+;;; Berechnung von Wahrscheinlichkeiten und empirischen Werten der binomialen Verteilung. Hier: n mal würfeln und zählen, wie oft gerade Augenzahl (P=1/2) oder eine Sechs (P=1/6) kommt.
+;;; 
+;; **
+
+;; @@
+(ns statistik-test.binonial-verteilte-zahlen
+  (:require [gorilla-plot.core :as plot]))
+;; @@
+
+;; **
+;;; ## Wahrscheinlichkeiten
+;;; Logik zur Berechnung von (binomialen) Wahrscheinlichkeiten.
+;; **
+
+;; @@
+(defn factorial [n]
+  (loop [cnt n ; typehint ^double ? <- int-overflow
+         acc 1]
+    (if (zero? cnt)
+      acc
+      (recur (dec cnt) (* acc cnt)))))
+
+(defn n-over-m [n m] ; n aus m zb 6 aus 49 (Lotto)
+  (/ (factorial m) (* (factorial n) (factorial (- m n)))))
+
+(defn p-binomial
+  "Wahrscheinlichkeit nach Formel (n aus m) * (p hoch n) * (q hoch (m - n))"
+  [t-cnt, w-cnt, p]
+  (let [q (- 1 p)]
+    (* (n-over-m t-cnt w-cnt) (Math/pow p t-cnt) (Math/pow q (- w-cnt t-cnt)))))
+
+(defn wahrscheinlichkeiten
+  "Vektor mit m Wahrscheinlichkeiten nach Formel p-binomial"
+  [w-cnt, p]
+  (mapv (fn [t-cnt] (p-binomial t-cnt w-cnt p)) (range 0 (inc w-cnt))))
+;; @@
+
+;; **
+;;; ## Empirische Werte
+;;; Logik zur Berechnung von empirischen Werte (binomial verteilte Zahlen erzeugt durch Würfeln). 
+;; **
+
+;; @@
+s(defn wuerfeln [] (inc (rand-int 6)))
+
+(defn binomial-zahl
+  "Liefert Anzahl der Treffer nach n mal Wuefeln"
+  [anzahl-wuerfe treffer-fn]
+  (reduce (fn [anzahl-treffer augenzahl] (if (treffer-fn augenzahl)
+                                           (inc anzahl-treffer)
+                                           anzahl-treffer))
+
+          0
+          (take anzahl-wuerfe (repeatedly wuerfeln))))
+
+(defn empirische-werte
+  "n Binomial verteilte Zahlen erzeugen"
+  [anzahl-versuche anzahl-wuerfe treffer-fn]
+  (take anzahl-versuche (repeatedly #(binomial-zahl anzahl-wuerfe treffer-fn))))
+;; @@
+
+;; **
+;;; ## Parameter  
+;;; Definition von Parametern. Mit diesen Werten kann man experimentieren.
+;;; 
+;; **
+
+;; @@
+(def ^:const TREFFER-FN
+  "Treffer-Funktion"
+  even?) ; geraden Zahlen sind Treffer
+
+(def ^:const P
+  "Wahrscheinlichkeit fuer Treffer (pro Wurf)"
+  (/ 1.0  2.0)) ; siehe TREFFER-FN - muß korrrespondieren !
+
+(def ^:const W-CNT ; Wert >20 ergibt int-overflow
+  "Anzahl der Wuerfe pro Versuch => Breite der Verteilung"
+  16)
+
+(def ^:const V-CNT
+  "Anzahl der Versuche (Jeder Versuch liefert genau einen Wert -> y-empirisch)"
+  60)
+;; @@
+
+;; **
+;;; ## Plot
+;;; Ausgabe der Verteilung.
+;; **
+
+;; @@
+(let [y-erwartet (mapv (fn [x y] [x y]) (range 0 (inc W-CNT)) (wahrscheinlichkeiten W-CNT P))
+      y-empirisch (empirische-werte V-CNT W-CNT TREFFER-FN)]
+  (print "Häufigkeiten:" (sort-by key (frequencies y-empirisch)))
+  (plot/compose (plot/list-plot y-erwartet :joined true :color "red")
+                (plot/histogram y-empirisch :bins V-CNT :normalize :probability :color "gray")))
+;; @@
