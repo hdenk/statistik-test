@@ -1,0 +1,117 @@
+;; gorilla-repl.fileformat = 1
+
+;; **
+;;; # Normal verteilte Wahrscheinlichkeiten
+;;; Berechnung von Wahrscheinlichkeiten und Zahlen der Normal-Verteilung. Hier: Durch Mittelwertbildung beim Würfeln.
+;; **
+
+;; @@
+(ns statistik-test.normal-verteilte-zahlen
+  (:require [gorilla-plot.core :as plot]))
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-nil'>nil</span>","value":"nil"}
+;; <=
+
+;; **
+;;; ## Wahrscheinlichkeiten
+;;; Logik zur Berechnung der (geometrischen) Wahrscheinlichkeiten.
+;; **
+
+;; @@
+(defn xms [x, mu, sigma]
+  (/ (- x mu) sigma))
+  
+(defn p-normal
+  "Dichtefunktion der Normalverteilung"
+  [x mu sigma]
+  (* (/ 1 (* (Math/sqrt (* 2 Math/PI)) sigma)) 
+     (Math/pow Math/E (* -0.5 (Math/pow (xms x mu sigma) 2)))))
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-double'>0.24197072451914337</span>","value":"0.24197072451914337"}
+;; <=
+
+;; **
+;;; ## Empirische Werte
+;;; Logik zur Berechnung von empirischen Werten (geometrisch verteilte Zahlen erzeugt durch Würfeln). 
+;; **
+
+;; @@
+(defn wuerfeln [] (inc (rand-int 6))) 
+
+(defn mittelwert
+  "Liefert Mittelwert (Augensumme / Anzahl der Wuerfe)"
+  [w-cnt]
+  (let [augensumme (reduce + 0 (take w-cnt (repeatedly wuerfeln)))]
+    (/ augensumme w-cnt)))
+
+(defn empirische-werte
+  "Normalverteilte Zahlen erzeugen (Mittelwertbildung)"
+  [v-cnt]
+  (take v-cnt (repeatedly #(mittelwert v-cnt))))
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-var'>#&#x27;statistik-test.geometrisch-verteilte-zahlen/empirische-werte</span>","value":"#'statistik-test.geometrisch-verteilte-zahlen/empirische-werte"}
+;; <=
+
+;; **
+;;; ## Parameter
+;;; Mit diesen Werten kann man experimentieren.
+;; **
+
+;; @@
+(def ^:const W-CNT 
+  "Anzahl der Würfe pro Versuch" 
+  16)
+
+(def ^:const V-CNT 
+  "Anzahl der Versuche. Jeder Versuch liefert genau eine Zahl (Mittelwertberechnung)" 
+  100)
+
+(def ^:const MU 
+  "Mittelwert des Wuerfelns (Erwartungswert)" 
+  3.5)
+
+(def ^:const W-SIGMA 
+  "Standardabweichung des Wuerfelns (Erwartungswert)" 
+  1.7078)
+
+(def ^:const M-SIGMA 
+  "Standardabweichung der Mittelwertbildung (Erwartungswert)" 
+  (/ W-SIGMA (Math/pow W-CNT 0.5)))
+
+(def ^:const NUM-BINS 
+  "Anzahl Histogramm-Balken" 
+  16)
+;; @@
+;; =>
+;;; {"type":"html","content":"<span class='clj-var'>#&#x27;statistik-test.geometrisch-verteilte-zahlen/NUM-BINS</span>","value":"#'statistik-test.geometrisch-verteilte-zahlen/NUM-BINS"}
+;; <=
+
+;; **
+;;; ## Plot
+;;; Ausgabe der Verteilung.
+;; **
+
+;; @@
+(let [x-start (- MU (* 2.0 M-SIGMA))
+      x-stop (+ MU (* 2.0 M-SIGMA))
+      step-width (/ (- x-stop x-start) NUM-BINS)
+      y-erwartet (mapv (fn [x] (vector x (p-normal x MU M-SIGMA))) (range x-start x-stop step-width))
+      y-empirisch (empirische-werte V-CNT)]
+  ;(print y-erwartet)
+  (print (sort-by key (frequencies y-empirisch)))
+  (plot/compose (plot/list-plot y-erwartet :joined true :color "red")
+                (plot/histogram y-empirisch :bins W-CNT :normalize :probability :color "gray")))
+;; @@
+;; ->
+;;; ([309/100 1] [16/5 1] [161/50 3] [13/4 3] [163/50 1] [327/100 1] [82/25 2] [33/10 4] [83/25 1] [333/100 4] [167/50 2] [84/25 4] [337/100 4] [339/100 2] [17/5 5] [341/100 2] [343/100 4] [86/25 5] [69/20 2] [173/50 2] [347/100 3] [87/25 2] [349/100 1] [7/2 1] [88/25 2] [177/50 1] [71/20 2] [89/25 2] [357/100 3] [179/50 3] [359/100 5] [18/5 1] [361/100 3] [363/100 4] [183/50 2] [367/100 2] [92/25 2] [371/100 2] [187/50 1] [377/100 2] [191/50 1] [193/50 1] [389/100 1])
+;; <-
+;; =>
+;;; {"type":"vega","content":{"width":400,"height":247.2187957763672,"padding":{"top":10,"left":55,"bottom":40,"right":10},"scales":[{"name":"x","type":"linear","range":"width","zero":false,"domain":{"data":"91426b61-60cc-43c2-b892-29d8ffb8078e","field":"data.x"}},{"name":"y","type":"linear","range":"height","nice":true,"zero":false,"domain":{"data":"91426b61-60cc-43c2-b892-29d8ffb8078e","field":"data.y"}}],"axes":[{"type":"x","scale":"x"},{"type":"y","scale":"y"}],"data":[{"name":"91426b61-60cc-43c2-b892-29d8ffb8078e","values":[{"x":2.6461,"y":0.12645735217985263},{"x":2.7528375,"y":0.2020782733962092},{"x":2.859575,"y":0.3033554178847447},{"x":2.9663125,"y":0.4277997081368354},{"x":3.07305,"y":0.5667425331283366},{"x":3.1797874999999998,"y":0.705322478404507},{"x":3.2865249999999997,"y":0.8246055200007012},{"x":3.3932624999999996,"y":0.905651989232578},{"x":3.4999999999999996,"y":0.9344004693791608},{"x":3.6067374999999995,"y":0.9056519892325784},{"x":3.7134749999999994,"y":0.824605520000702},{"x":3.8202124999999993,"y":0.7053224784045082},{"x":3.9269499999999993,"y":0.5667425331283377},{"x":4.033687499999999,"y":0.4277997081368365},{"x":4.140425,"y":0.30335541788474507},{"x":4.2471625,"y":0.2020782733962092}]},{"name":"66bcf712-f8a4-4d2b-90cb-952610a60b53","values":[{"x":3.09,"y":0},{"x":3.1399999999999997,"y":0.01},{"x":3.1899999999999995,"y":0.0},{"x":3.2399999999999993,"y":0.04},{"x":3.289999999999999,"y":0.07},{"x":3.339999999999999,"y":0.09},{"x":3.389999999999999,"y":0.1},{"x":3.4399999999999986,"y":0.13},{"x":3.4899999999999984,"y":0.14},{"x":3.5399999999999983,"y":0.04},{"x":3.589999999999998,"y":0.11},{"x":3.639999999999998,"y":0.13},{"x":3.6899999999999977,"y":0.06},{"x":3.7399999999999975,"y":0.02},{"x":3.7899999999999974,"y":0.03},{"x":3.839999999999997,"y":0.01},{"x":3.889999999999997,"y":0.01},{"x":3.939999999999997,"y":0.01},{"x":3.9899999999999967,"y":0}]}],"marks":[{"type":"line","from":{"data":"91426b61-60cc-43c2-b892-29d8ffb8078e"},"properties":{"enter":{"x":{"scale":"x","field":"data.x"},"y":{"scale":"y","field":"data.y"},"stroke":{"value":"red"},"strokeWidth":{"value":2},"strokeOpacity":{"value":1}}}},{"type":"line","from":{"data":"66bcf712-f8a4-4d2b-90cb-952610a60b53"},"properties":{"enter":{"x":{"scale":"x","field":"data.x"},"y":{"scale":"y","field":"data.y"},"interpolate":{"value":"step-before"},"fill":{"value":"gray"},"fillOpacity":{"value":0.4},"stroke":{"value":"gray"},"strokeWidth":{"value":2},"strokeOpacity":{"value":1}}}}]},"value":"#gorilla_repl.vega.VegaView{:content {:width 400, :height 247.2188, :padding {:top 10, :left 55, :bottom 40, :right 10}, :scales [{:name \"x\", :type \"linear\", :range \"width\", :zero false, :domain {:data \"91426b61-60cc-43c2-b892-29d8ffb8078e\", :field \"data.x\"}} {:name \"y\", :type \"linear\", :range \"height\", :nice true, :zero false, :domain {:data \"91426b61-60cc-43c2-b892-29d8ffb8078e\", :field \"data.y\"}}], :axes [{:type \"x\", :scale \"x\"} {:type \"y\", :scale \"y\"}], :data ({:name \"91426b61-60cc-43c2-b892-29d8ffb8078e\", :values ({:x 2.6461, :y 0.12645735217985263} {:x 2.7528375, :y 0.2020782733962092} {:x 2.859575, :y 0.3033554178847447} {:x 2.9663125, :y 0.4277997081368354} {:x 3.07305, :y 0.5667425331283366} {:x 3.1797874999999998, :y 0.705322478404507} {:x 3.2865249999999997, :y 0.8246055200007012} {:x 3.3932624999999996, :y 0.905651989232578} {:x 3.4999999999999996, :y 0.9344004693791608} {:x 3.6067374999999995, :y 0.9056519892325784} {:x 3.7134749999999994, :y 0.824605520000702} {:x 3.8202124999999993, :y 0.7053224784045082} {:x 3.9269499999999993, :y 0.5667425331283377} {:x 4.033687499999999, :y 0.4277997081368365} {:x 4.140425, :y 0.30335541788474507} {:x 4.2471625, :y 0.2020782733962092})} {:name \"66bcf712-f8a4-4d2b-90cb-952610a60b53\", :values ({:x 3.09, :y 0} {:x 3.1399999999999997, :y 0.01} {:x 3.1899999999999995, :y 0.0} {:x 3.2399999999999993, :y 0.04} {:x 3.289999999999999, :y 0.07} {:x 3.339999999999999, :y 0.09} {:x 3.389999999999999, :y 0.1} {:x 3.4399999999999986, :y 0.13} {:x 3.4899999999999984, :y 0.14} {:x 3.5399999999999983, :y 0.04} {:x 3.589999999999998, :y 0.11} {:x 3.639999999999998, :y 0.13} {:x 3.6899999999999977, :y 0.06} {:x 3.7399999999999975, :y 0.02} {:x 3.7899999999999974, :y 0.03} {:x 3.839999999999997, :y 0.01} {:x 3.889999999999997, :y 0.01} {:x 3.939999999999997, :y 0.01} {:x 3.9899999999999967, :y 0})}), :marks ({:type \"line\", :from {:data \"91426b61-60cc-43c2-b892-29d8ffb8078e\"}, :properties {:enter {:x {:scale \"x\", :field \"data.x\"}, :y {:scale \"y\", :field \"data.y\"}, :stroke {:value \"red\"}, :strokeWidth {:value 2}, :strokeOpacity {:value 1}}}} {:type \"line\", :from {:data \"66bcf712-f8a4-4d2b-90cb-952610a60b53\"}, :properties {:enter {:x {:scale \"x\", :field \"data.x\"}, :y {:scale \"y\", :field \"data.y\"}, :interpolate {:value \"step-before\"}, :fill {:value \"gray\"}, :fillOpacity {:value 0.4}, :stroke {:value \"gray\"}, :strokeWidth {:value 2}, :strokeOpacity {:value 1}}}})}}"}
+;; <=
+
+;; @@
+
+;; @@
