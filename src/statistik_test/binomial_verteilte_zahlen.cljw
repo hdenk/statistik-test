@@ -46,7 +46,7 @@
 ;; **
 
 ;; @@
-s(defn wuerfeln [] (inc (rand-int 6)))
+(defn wuerfeln [] (inc (rand-int 6)))
 
 (defn binomial-zahl
   "Liefert Anzahl der Treffer nach n mal Wuefeln"
